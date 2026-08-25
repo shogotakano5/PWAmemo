@@ -1,0 +1,41 @@
+{
+  "id": "/",
+  "name": "メモ — オフライン対応メモ帳",
+  "short_name": "メモ",
+  "description": "この端末だけに保存するか、アカウントを作ってサーバに同期するかを選べるメモアプリ。オフラインでも使えます。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "any",
+  "background_color": "#f6f7f9",
+  "theme_color": "#2f6df6",
+  "lang": "ja",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "/icons/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "新しいメモ",
+      "short_name": "新規",
+      "url": "/?new=1",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
