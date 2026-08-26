@@ -1,52 +1,19 @@
-import { createHmac, randomBytes, randomUUID, scrypt, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { db } from './db';
-import type { PublicUser } from './types';
-
-const scryptAsync = promisify(scrypt) as (
-  password: string,
-  salt: Buffer,
-  keylen: number,
-) => Promise<Buffer>;
+import { authSecret, decryptField } from './crypto';
+import { MAX_PIN_LENGTH, MIN_PASSWORD_LENGTH, MIN_PIN_LENGTH, type PublicUser } from './types';
+import type { SecretKind } from './crypto';
 
 export const SESSION_COOKIE = 'memo_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-function secret(): string {
-  const value = process.env.AUTH_SECRET;
-  if (value && value.length >= 16) return value;
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('AUTH_SECRET_MISSING');
-  }
-  // Development convenience only: sessions reset whenever the dev server does.
-  return 'dev-only-insecure-secret-do-not-use-in-production';
-}
-
-/* -------------------------------------------------------------------------- */
-/* Passwords                                                                   */
-/* -------------------------------------------------------------------------- */
-
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const derived = await scryptAsync(password, salt, 64);
-  return `scrypt$${salt.toString('base64url')}$${derived.toString('base64url')}`;
-}
-
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const [scheme, saltPart, hashPart] = stored.split('$');
-  if (scheme !== 'scrypt' || !saltPart || !hashPart) return false;
-  const expected = Buffer.from(hashPart, 'base64url');
-  const derived = await scryptAsync(password, Buffer.from(saltPart, 'base64url'), expected.length);
-  return derived.length === expected.length && timingSafeEqual(derived, expected);
-}
 
 /* -------------------------------------------------------------------------- */
 /* Session tokens: base64url(payload).base64url(hmac)                          */
 /* -------------------------------------------------------------------------- */
 
 function sign(payload: string): string {
-  return createHmac('sha256', secret()).update(payload).digest('base64url');
+  return createHmac('sha256', authSecret()).update(payload).digest('base64url');
 }
 
 export function createSessionToken(userId: string): string {
@@ -107,11 +74,26 @@ export async function currentUser(): Promise<PublicUser | null> {
   if (!userId) return null;
 
   const pool = await db();
-  const { rows } = await pool.query<{ id: string; email: string }>(
-    'SELECT id, email FROM users WHERE id = $1',
+  const { rows } = await pool.query<{ id: string; email_encrypted: string; secret_kind: string }>(
+    'SELECT id, email_encrypted, secret_kind FROM users WHERE id = $1',
     [userId],
   );
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  return toPublicUser(row);
+}
+
+/** Decrypts the stored e-mail for the response. */
+export function toPublicUser(row: {
+  id: string;
+  email_encrypted: string;
+  secret_kind: string;
+}): PublicUser {
+  return {
+    id: row.id,
+    email: decryptField(row.email_encrypted),
+    secretKind: row.secret_kind === 'pin' ? 'pin' : 'password',
+  };
 }
 
 export function newId(): string {
@@ -130,8 +112,37 @@ export function normalizeEmail(value: unknown): string | null {
   return email;
 }
 
-export function validatePassword(value: unknown): string | null {
+export function normalizeSecretKind(value: unknown): SecretKind {
+  return value === 'pin' ? 'pin' : 'password';
+}
+
+/**
+ * A PIN is digits only and short; a password is anything of a decent length.
+ * Returning null means "reject", so the caller never hashes junk.
+ */
+export function validateSecret(value: unknown, kind: SecretKind): string | null {
   if (typeof value !== 'string') return null;
-  if (value.length < 8 || value.length > 200) return null;
+  if (kind === 'pin') {
+    if (!new RegExp(`^\\d{${MIN_PIN_LENGTH},${MAX_PIN_LENGTH}}$`).test(value)) return null;
+    // Reject the handful of PINs that guessing attacks always try first.
+    if (/^(\d)\1*$/.test(value)) return null;
+    if ('01234567890'.includes(value) || '09876543210'.includes(value)) return null;
+    return value;
+  }
+  if (value.length < MIN_PASSWORD_LENGTH || value.length > 200) return null;
   return value;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Brute-force protection                                                      */
+/* -------------------------------------------------------------------------- */
+
+/** Lock-out thresholds. PINs are short, so repeated guessing must get expensive. */
+const LOCKOUT_AFTER_ATTEMPTS = 5;
+const LOCKOUT_STEPS_MS = [60_000, 5 * 60_000, 30 * 60_000, 60 * 60_000];
+
+export function lockoutFor(failedAttempts: number): number {
+  if (failedAttempts < LOCKOUT_AFTER_ATTEMPTS) return 0;
+  const step = Math.min(failedAttempts - LOCKOUT_AFTER_ATTEMPTS, LOCKOUT_STEPS_MS.length - 1);
+  return Date.now() + LOCKOUT_STEPS_MS[step];
 }

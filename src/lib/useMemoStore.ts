@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { auth, local, newMemo, syncNamespace, type SessionInfo } from './store';
-import { deriveTitle, type Memo, type PublicUser, type StorageMode } from './types';
+import {
+  deriveTitle,
+  type Memo,
+  type PublicUser,
+  type SecretKind,
+  type StorageMode,
+} from './types';
 
 const MODE_KEY = 'pwa-memo:mode';
 const SYNC_INTERVAL_MS = 30_000;
@@ -251,16 +257,16 @@ export function useMemoStore() {
   );
 
   const login = useCallback(
-    async (email: string, password: string, importLocal: boolean) => {
-      const { user: loggedIn } = await auth.login(email, password);
+    async (email: string, secret: string, importLocal: boolean) => {
+      const { user: loggedIn } = await auth.login(email, secret);
       await afterLogin(loggedIn, importLocal);
     },
     [afterLogin],
   );
 
   const signup = useCallback(
-    async (email: string, password: string, importLocal: boolean) => {
-      const { user: created } = await auth.signup(email, password);
+    async (email: string, secret: string, secretKind: SecretKind, importLocal: boolean) => {
+      const { user: created } = await auth.signup(email, secret, secretKind);
       await afterLogin(created, importLocal);
     },
     [afterLogin],

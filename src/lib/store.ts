@@ -1,7 +1,7 @@
 'use client';
 
 import * as local from './localdb';
-import type { Memo, PublicUser, SyncResponse } from './types';
+import type { Memo, PublicUser, SecretKind, SyncResponse } from './types';
 
 export type SessionInfo = {
   user: PublicUser | null;
@@ -29,15 +29,16 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const auth = {
   me: () => api<SessionInfo>('/api/auth/me'),
-  signup: (email: string, password: string) =>
+  signup: (email: string, secret: string, secretKind: SecretKind) =>
     api<{ user: PublicUser }>('/api/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, secret, secretKind }),
     }),
-  login: (email: string, password: string) =>
+  /** The server knows whether the account uses a password or a PIN. */
+  login: (email: string, secret: string) =>
     api<{ user: PublicUser }>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, secret }),
     }),
   logout: () => api<{ ok: true }>('/api/auth/logout', { method: 'POST' }),
 };

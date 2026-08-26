@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { blindIndex, encryptField } from './crypto';
 
 /**
  * Postgres is optional: without a connection string the app runs in
@@ -42,16 +43,72 @@ function getPool(): Pool {
   return globals.__memoPool;
 }
 
+async function columnExists(pool: Pool, table: string, column: string): Promise<boolean> {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM information_schema.columns
+      WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2`,
+    [table, column],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Upgrades the original plaintext-e-mail table to the encrypted layout. The
+ * ciphertext can only be produced by the app, so the backfill runs here rather
+ * than in SQL. No-op once the old columns are gone.
+ */
+async function encryptExistingEmails(pool: Pool): Promise<void> {
+  if (!(await columnExists(pool, 'users', 'email'))) return;
+
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_index TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_encrypted TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS secret_hash TEXT`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS secret_kind TEXT NOT NULL DEFAULT 'password'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER NOT NULL DEFAULT 0`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until BIGINT NOT NULL DEFAULT 0`);
+
+  const { rows } = await pool.query<{ id: string; email: string; password_hash: string | null }>(
+    `SELECT id, email, password_hash FROM users WHERE email_index IS NULL`,
+  );
+  for (const row of rows) {
+    const email = row.email.trim().toLowerCase();
+    await pool.query(
+      `UPDATE users
+          SET email_index = $2,
+              email_encrypted = $3,
+              secret_hash = COALESCE(secret_hash, $4)
+        WHERE id = $1`,
+      [row.id, blindIndex(email), encryptField(email), row.password_hash ?? ''],
+    );
+  }
+
+  await pool.query(`ALTER TABLE users DROP COLUMN IF EXISTS email`);
+  await pool.query(`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`);
+  await pool.query(`ALTER TABLE users ALTER COLUMN email_index SET NOT NULL`);
+  await pool.query(`ALTER TABLE users ALTER COLUMN email_encrypted SET NOT NULL`);
+  await pool.query(`ALTER TABLE users ALTER COLUMN secret_hash SET NOT NULL`);
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_email_index_key ON users (email_index)`,
+  );
+}
+
 async function migrate(): Promise<void> {
   const pool = getPool();
+  // The e-mail address is stored encrypted (AES-256-GCM) and matched through a
+  // keyed blind index, so no registration data is readable in the table itself.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id            TEXT PRIMARY KEY,
-      email         TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      created_at    BIGINT NOT NULL
+      id              TEXT PRIMARY KEY,
+      email_index     TEXT NOT NULL UNIQUE,
+      email_encrypted TEXT NOT NULL,
+      secret_hash     TEXT NOT NULL,
+      secret_kind     TEXT NOT NULL DEFAULT 'password',
+      failed_attempts INTEGER NOT NULL DEFAULT 0,
+      locked_until    BIGINT NOT NULL DEFAULT 0,
+      created_at      BIGINT NOT NULL
     );
   `);
+  await encryptExistingEmails(pool);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS memos (
       id         TEXT NOT NULL,

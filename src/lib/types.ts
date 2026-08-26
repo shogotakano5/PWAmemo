@@ -11,9 +11,14 @@ export type Memo = {
   deleted: boolean;
 };
 
+export type SecretKind = 'password' | 'pin';
+
 export type PublicUser = {
   id: string;
+  /** The e-mail address doubles as the user id; it is unique per account. */
   email: string;
+  /** Which credential the account was registered with. */
+  secretKind: SecretKind;
 };
 
 /** Where the memos the user is currently looking at live. */
@@ -29,6 +34,10 @@ export type SyncResponse = {
   memos: Memo[];
   serverTime: number;
 };
+
+export const MIN_PASSWORD_LENGTH = 8;
+export const MIN_PIN_LENGTH = 4;
+export const MAX_PIN_LENGTH = 10;
 
 export const MAX_TITLE_LENGTH = 200;
 export const MAX_CONTENT_LENGTH = 100_000;

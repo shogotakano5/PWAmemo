@@ -589,3 +589,13 @@ button {
     display: none;
   }
 }
+
+.hint {
+  margin: -6px 0 16px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}

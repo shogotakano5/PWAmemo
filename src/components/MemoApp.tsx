@@ -232,7 +232,11 @@ export default function MemoApp() {
       {menuOpen && user ? (
         <div className="menu" ref={menuRef}>
           <h3>アカウント</h3>
-          <p className="muted">{user.email}</p>
+          <p className="muted">
+            {user.email}
+            <br />
+            ログイン方法: {user.secretKind === 'pin' ? 'PIN（数字）' : 'パスワード'}
+          </p>
           <div className="mode-switch" role="group" aria-label="保存先">
             <button
               type="button"
