@@ -44,6 +44,10 @@ const CONNECTION_ERROR_HINTS: Record<string, string> = {
   // Shared network-layer codes (Postgres or SMTP — message says which is likely).
   ENOTFOUND:
     '接続先ホストが見つかりません。POSTGRES_URL または SMTP_HOST のホスト名を確認してください。',
+  // nodemailer's DNS-resolution failure — commonly caused by pasting a full
+  // URL (smtp://host:port) into SMTP_HOST instead of a bare hostname.
+  EDNS:
+    'SMTP_HOST の名前解決に失敗しました。"smtp://" や ":ポート番号" を含めず、ホスト名だけを入力してください（例: sandbox.smtp.mailtrap.io）。',
   ECONNREFUSED:
     '接続が拒否されました。POSTGRES_URL、または SMTP_HOST / SMTP_PORT を確認してください。',
   ETIMEDOUT:
