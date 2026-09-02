@@ -52,12 +52,14 @@ async function networkFirstShell(request) {
   const cache = await caches.open(SHELL_CACHE);
   try {
     const response = await fetch(request);
-    if (response && response.ok) cache.put(SHELL_URL, response.clone());
+    // Cache under the actual URL, not a fixed key — otherwise visiting a
+    // second page (e.g. /admin) would overwrite the cached "/" app shell.
+    if (response && response.ok) cache.put(request, response.clone());
     return response;
   } catch (error) {
-    // Offline: any previously rendered page of this app works as the shell,
-    // because all memo data is read from IndexedDB on the client.
-    const cached = (await cache.match(SHELL_URL)) || (await cache.match(request));
+    // Offline: prefer this exact page if it was ever cached, otherwise fall
+    // back to the app shell — all memo data is read from IndexedDB anyway.
+    const cached = (await cache.match(request)) || (await cache.match(SHELL_URL));
     if (cached) return cached;
     return new Response(
       '<!doctype html><meta charset="utf-8"><title>オフライン</title>' +

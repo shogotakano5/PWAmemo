@@ -124,6 +124,20 @@ async function migrate(): Promise<void> {
   await pool.query(
     `CREATE INDEX IF NOT EXISTS memos_user_updated_idx ON memos (user_id, updated_at DESC);`,
   );
+
+  // One-time codes for admin login. Not tied to the users table at all — an
+  // "admin" is just an address on the ADMIN_EMAILS allowlist, which may or may
+  // not also have a memo account. One row per address; a new request for the
+  // same address overwrites it, which doubles as automatic single-use + resend.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_otp (
+      email_index TEXT PRIMARY KEY,
+      code_hash   TEXT NOT NULL,
+      expires_at  BIGINT NOT NULL,
+      attempts    INTEGER NOT NULL DEFAULT 0,
+      created_at  BIGINT NOT NULL
+    );
+  `);
 }
 
 /** Returns a migrated pool. The migration runs at most once per process. */

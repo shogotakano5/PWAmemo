@@ -35,6 +35,26 @@ function derivedKey(info: string): Buffer {
   return Buffer.from(hkdfSync('sha256', authSecret(), 'pwa-memo-hkdf-salt', info, 32));
 }
 
+/**
+ * Exposes a purpose-scoped key for callers outside this module (e.g. signing
+ * the admin session cookie with a key distinct from the user session's).
+ */
+export function deriveKey(info: string): Buffer {
+  return derivedKey(info);
+}
+
+/** Keyed digest for short-lived, single-use secrets (e.g. an OTP code). */
+export function keyedDigest(info: string, value: string): string {
+  return createHmac('sha256', derivedKey(info)).update(value).digest('hex');
+}
+
+/** Constant-time comparison of two keyed digests produced by {@link keyedDigest}. */
+export function digestsMatch(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'hex');
+  const bufB = Buffer.from(b, 'hex');
+  return bufA.length === bufB.length && bufA.length > 0 && timingSafeEqual(bufA, bufB);
+}
+
 /* -------------------------------------------------------------------------- */
 /* Reversible field encryption (AES-256-GCM)                                   */
 /* -------------------------------------------------------------------------- */

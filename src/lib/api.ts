@@ -16,6 +16,18 @@ export function DB_NOT_CONFIGURED() {
   );
 }
 
+export function ADMIN_NOT_CONFIGURED() {
+  return fail(
+    'admin_not_configured',
+    '管理画面は未設定です。ADMIN_EMAILS と SMTP の環境変数を設定してください。',
+    503,
+  );
+}
+
+export function ADMIN_UNAUTHORIZED() {
+  return fail('admin_unauthorized', '管理者としてログインしてください。', 401);
+}
+
 /** Maps thrown infrastructure errors onto a user-facing response. */
 export function serverError(error: unknown) {
   const code = error instanceof Error ? error.message : '';
@@ -27,6 +39,7 @@ export function serverError(error: unknown) {
       503,
     );
   }
+  if (code === 'MAIL_NOT_CONFIGURED') return ADMIN_NOT_CONFIGURED();
   console.error('[api] unexpected error', error);
   return fail('internal_error', 'サーバでエラーが発生しました。', 500);
 }
