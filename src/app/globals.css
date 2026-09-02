@@ -699,6 +699,12 @@ button {
   white-space: nowrap;
 }
 
+.admin-cell-muted {
+  color: var(--text-muted);
+  font-style: italic;
+  white-space: normal !important;
+}
+
 .admin-table th {
   color: var(--text-muted);
   font-weight: 600;

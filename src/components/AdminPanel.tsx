@@ -300,12 +300,19 @@ export default function AdminPanel() {
                   const locked = user.lockedUntil > Date.now();
                   return (
                     <tr key={user.id}>
-                      <td>{user.email}</td>
+                      <td className={user.decryptable ? undefined : 'admin-cell-muted'}>
+                        {user.email}
+                      </td>
                       <td>{user.secretKind === 'pin' ? 'PIN' : 'パスワード'}</td>
                       <td>{user.memoCount}</td>
                       <td>{dateFormatter.format(new Date(user.createdAt))}</td>
                       <td>
-                        {locked ? (
+                        {!user.decryptable ? (
+                          <span className="badge" title="AUTH_SECRET が変更された可能性があります">
+                            <span className="dot dot-error" />
+                            復号エラー
+                          </span>
+                        ) : locked ? (
                           <span className="badge">
                             <span className="dot dot-error" />
                             ロック中

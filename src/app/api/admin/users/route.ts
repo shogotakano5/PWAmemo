@@ -35,15 +35,31 @@ export async function GET() {
         LIMIT ${MAX_USERS}`,
     );
 
-    const users = rows.map((row) => ({
-      id: row.id,
-      email: decryptField(row.email_encrypted),
-      secretKind: row.secret_kind === 'pin' ? 'pin' : 'password',
-      createdAt: Number(row.created_at),
-      failedAttempts: row.failed_attempts,
-      lockedUntil: Number(row.locked_until),
-      memoCount: Number(row.memo_count),
-    }));
+    // A row whose e-mail was encrypted under a since-changed AUTH_SECRET
+    // cannot be decrypted — and never will be, without the old secret. Don't
+    // let that one row's exception take the whole listing down; surface it
+    // as its own state instead, so it can still be found and deleted.
+    const users = rows.map((row) => {
+      let email: string;
+      let decryptable = true;
+      try {
+        email = decryptField(row.email_encrypted);
+      } catch (error) {
+        console.error('[admin/users] failed to decrypt email for', row.id, error);
+        email = '(復号できません — AUTH_SECRET が変更された可能性があります)';
+        decryptable = false;
+      }
+      return {
+        id: row.id,
+        email,
+        decryptable,
+        secretKind: row.secret_kind === 'pin' ? 'pin' : 'password',
+        createdAt: Number(row.created_at),
+        failedAttempts: row.failed_attempts,
+        lockedUntil: Number(row.locked_until),
+        memoCount: Number(row.memo_count),
+      };
+    });
 
     return json({ users, truncated: users.length === MAX_USERS });
   } catch (error) {

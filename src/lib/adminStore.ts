@@ -3,6 +3,8 @@
 export type AdminUser = {
   id: string;
   email: string;
+  /** False when the stored e-mail could not be decrypted with the current AUTH_SECRET. */
+  decryptable: boolean;
   secretKind: 'password' | 'pin';
   createdAt: number;
   failedAttempts: number;
