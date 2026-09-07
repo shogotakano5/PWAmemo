@@ -95,7 +95,11 @@ button {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  /* --app-vh (set from visualViewport.height in JS) wins once the software
+     keyboard is open, so the layout shrinks to fit above it instead of the
+     keyboard covering the top of the page. Falls back to 100dvh before the
+     JS runs and on browsers where interactive-widget already handles it. */
+  height: var(--app-vh, 100dvh);
 }
 
 /* ---------------------------------------------------------------- header -- */
@@ -377,6 +381,133 @@ button {
   line-height: 1.75;
 }
 
+.editor-preview {
+  overflow-y: auto;
+  font-family:
+    system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI',
+    'Segoe UI', sans-serif;
+  line-height: 1.75;
+}
+
+.editor-preview > :first-child {
+  margin-top: 0;
+}
+
+.editor-preview h1,
+.editor-preview h2,
+.editor-preview h3,
+.editor-preview h4,
+.editor-preview h5,
+.editor-preview h6 {
+  margin: 1.4em 0 0.5em;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.editor-preview h1 {
+  font-size: 1.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-preview h2 {
+  font-size: 1.35em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-preview h3 {
+  font-size: 1.15em;
+}
+
+.editor-preview p {
+  margin: 0.8em 0;
+}
+
+.editor-preview ul,
+.editor-preview ol {
+  margin: 0.8em 0;
+  padding-left: 1.6em;
+}
+
+.editor-preview li + li {
+  margin-top: 0.25em;
+}
+
+/* GFM task list items ("- [ ] …") come with their own checkbox already, so
+   drop the bullet that would otherwise sit right next to it. */
+.editor-preview li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-left: -1.4em;
+}
+
+.editor-preview li input[type='checkbox'] {
+  margin-right: 6px;
+}
+
+.editor-preview a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.editor-preview blockquote {
+  margin: 0.8em 0;
+  padding: 2px 16px;
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+}
+
+.editor-preview code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', 'Cascadia Mono', 'Noto Sans Mono', monospace;
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+.editor-preview pre {
+  margin: 0.8em 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  overflow-x: auto;
+}
+
+.editor-preview pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+.editor-preview hr {
+  margin: 1.6em 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.editor-preview table {
+  margin: 0.8em 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.editor-preview th,
+.editor-preview td {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.editor-preview th {
+  background: var(--surface-2);
+}
+
+.editor-preview img {
+  border-radius: 8px;
+}
+
 .editor-area:focus {
   outline: none;
 }
@@ -457,6 +588,25 @@ button {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 6px;
+}
+
+.auth-actions-row {
+  justify-content: space-between;
+}
+
+.link-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-link-row {
+  margin: -8px 0 16px;
 }
 
 .tabs {
@@ -585,7 +735,8 @@ button {
     padding: 16px;
   }
 
-  .header .hide-sm {
+  .header .hide-sm,
+  .editor-bar .hide-sm {
     display: none;
   }
 }
@@ -603,7 +754,7 @@ button {
 /* --------------------------------------------------------------- admin --- */
 
 .admin-shell {
-  min-height: 100dvh;
+  min-height: var(--app-vh, 100dvh);
   display: flex;
   align-items: flex-start;
   justify-content: center;

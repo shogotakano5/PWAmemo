@@ -26,6 +26,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
+  // Without this, the software keyboard overlays the page instead of
+  // shrinking it, so 100dvh-based layouts stay full-height behind the
+  // keyboard and the top rows of the editor end up hidden underneath it.
+  interactiveWidget: 'resizes-content',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#14161a' },

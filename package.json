@@ -12,6 +12,8 @@
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
+    "dompurify": "^3.4.15",
+    "marked": "^18.0.11",
     "next": "^15.5.24",
     "nodemailer": "^9.1.1",
     "pg": "8.16.3",

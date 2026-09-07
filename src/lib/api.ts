@@ -28,6 +28,18 @@ export function ADMIN_UNAUTHORIZED() {
   return fail('admin_unauthorized', '管理者としてログインしてください。', 401);
 }
 
+export function ACCOUNT_RECOVERY_NOT_CONFIGURED() {
+  return fail(
+    'account_recovery_not_configured',
+    'パスワード再設定・メールアドレス変更は未設定です。SMTP の環境変数を設定してください。',
+    503,
+  );
+}
+
+export function UNAUTHORIZED() {
+  return fail('unauthorized', 'ログインが必要です。', 401);
+}
+
 /**
  * Connection-layer failures from Postgres (`pg`) and SMTP (`nodemailer`) both
  * surface as a plain Error with a short `.code`. Neither library's codes are

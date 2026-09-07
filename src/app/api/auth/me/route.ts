@@ -1,4 +1,5 @@
 import { currentUser } from '@/lib/auth';
+import { isAccountRecoveryConfigured } from '@/lib/accountRecovery';
 import { isDatabaseConfigured } from '@/lib/db';
 import { json } from '@/lib/api';
 
@@ -8,12 +9,16 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const accountsEnabled = isDatabaseConfigured() && Boolean(process.env.AUTH_SECRET);
   if (!accountsEnabled) {
-    return json({ user: null, accountsEnabled: false });
+    return json({ user: null, accountsEnabled: false, accountRecoveryEnabled: false });
   }
   try {
-    return json({ user: await currentUser(), accountsEnabled: true });
+    return json({
+      user: await currentUser(),
+      accountsEnabled: true,
+      accountRecoveryEnabled: isAccountRecoveryConfigured(),
+    });
   } catch (error) {
     console.error('[auth/me] failed', error);
-    return json({ user: null, accountsEnabled: false });
+    return json({ user: null, accountsEnabled: false, accountRecoveryEnabled: false });
   }
 }

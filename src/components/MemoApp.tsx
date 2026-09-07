@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AuthDialog from './AuthDialog';
+import EmailChangeDialog from './EmailChangeDialog';
 import MemoEditor from './MemoEditor';
 import MemoList from './MemoList';
 import { usePwa } from '@/lib/usePwa';
+import { useViewportHeight } from '@/lib/useViewportHeight';
 import { useMemoStore, type SyncState } from '@/lib/useMemoStore';
 import { local } from '@/lib/store';
 import type { Memo } from '@/lib/types';
@@ -53,10 +55,12 @@ function StatusBadge({
 export default function MemoApp() {
   const store = useMemoStore();
   const { canInstall, install, updateReady, applyUpdate } = usePwa();
+  useViewportHeight();
 
   const [query, setQuery] = useState('');
   const [pane, setPane] = useState<'list' | 'editor'>('list');
   const [authOpen, setAuthOpen] = useState(false);
+  const [emailChangeOpen, setEmailChangeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [localMemoCount, setLocalMemoCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -264,6 +268,18 @@ export default function MemoApp() {
                 今すぐ同期
               </button>
             ) : null}
+            {session?.accountRecoveryEnabled ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setEmailChangeOpen(true);
+                }}
+              >
+                メールアドレスを変更
+              </button>
+            ) : null}
             {canInstall ? (
               <button type="button" className="btn" onClick={() => void install()}>
                 ホーム画面にインストール
@@ -290,9 +306,21 @@ export default function MemoApp() {
       {authOpen ? (
         <AuthDialog
           localMemoCount={localMemoCount}
+          accountRecoveryEnabled={session?.accountRecoveryEnabled ?? false}
           onLogin={store.login}
           onSignup={store.signup}
+          onRequestPasswordReset={store.requestPasswordReset}
+          onConfirmPasswordReset={store.confirmPasswordReset}
           onClose={() => setAuthOpen(false)}
+        />
+      ) : null}
+
+      {emailChangeOpen && user ? (
+        <EmailChangeDialog
+          currentEmail={user.email}
+          onRequestChange={store.requestEmailChange}
+          onConfirmChange={store.confirmEmailChange}
+          onClose={() => setEmailChangeOpen(false)}
         />
       ) : null}
     </div>

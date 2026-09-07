@@ -6,6 +6,7 @@ import type { Memo, PublicUser, SecretKind, SyncResponse } from './types';
 export type SessionInfo = {
   user: PublicUser | null;
   accountsEnabled: boolean;
+  accountRecoveryEnabled: boolean;
 };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -41,6 +42,26 @@ export const auth = {
       body: JSON.stringify({ email, secret }),
     }),
   logout: () => api<{ ok: true }>('/api/auth/logout', { method: 'POST' }),
+  requestPasswordReset: (email: string) =>
+    api<{ ok: true; message: string }>('/api/auth/password-reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  confirmPasswordReset: (email: string, code: string, newSecret: string) =>
+    api<{ user: PublicUser }>('/api/auth/password-reset/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, newSecret }),
+    }),
+  requestEmailChange: (newEmail: string, currentSecret: string) =>
+    api<{ ok: true; message: string }>('/api/auth/email-change/request', {
+      method: 'POST',
+      body: JSON.stringify({ newEmail, currentSecret }),
+    }),
+  confirmEmailChange: (code: string) =>
+    api<{ user: PublicUser }>('/api/auth/email-change/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
 };
 
 /**

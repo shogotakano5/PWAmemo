@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminApi, type AdminUser } from '@/lib/adminStore';
+import { useViewportHeight } from '@/lib/useViewportHeight';
 
 const dateFormatter = new Intl.DateTimeFormat('ja-JP', {
   year: 'numeric',
@@ -14,6 +15,7 @@ const dateFormatter = new Intl.DateTimeFormat('ja-JP', {
 type Step = 'loading' | 'not-configured' | 'request' | 'verify' | 'dashboard';
 
 export default function AdminPanel() {
+  useViewportHeight();
   const [step, setStep] = useState<Step>('loading');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');

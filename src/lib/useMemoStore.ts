@@ -74,7 +74,9 @@ export function useMemoStore() {
       })
       .catch(() => {
         // Offline or the API is unreachable — fall back to local-only.
-        if (!cancelled) setSession({ user: null, accountsEnabled: false });
+        if (!cancelled) {
+          setSession({ user: null, accountsEnabled: false, accountRecoveryEnabled: false });
+        }
       });
     return () => {
       cancelled = true;
@@ -241,7 +243,11 @@ export function useMemoStore() {
 
   const afterLogin = useCallback(
     async (loggedIn: PublicUser, importLocal: boolean) => {
-      setSession({ accountsEnabled: true, user: loggedIn });
+      setSession((current) => ({
+        accountsEnabled: true,
+        accountRecoveryEnabled: current?.accountRecoveryEnabled ?? false,
+        user: loggedIn,
+      }));
       if (importLocal) {
         try {
           await local.copyMemos(local.LOCAL_NAMESPACE, local.accountNamespace(loggedIn.id));
@@ -271,6 +277,26 @@ export function useMemoStore() {
     },
     [afterLogin],
   );
+
+  const requestPasswordReset = useCallback((email: string) => auth.requestPasswordReset(email), []);
+
+  const confirmPasswordReset = useCallback(
+    async (email: string, code: string, newSecret: string, importLocal: boolean) => {
+      const { user: recovered } = await auth.confirmPasswordReset(email, code, newSecret);
+      await afterLogin(recovered, importLocal);
+    },
+    [afterLogin],
+  );
+
+  const requestEmailChange = useCallback(
+    (newEmail: string, currentSecret: string) => auth.requestEmailChange(newEmail, currentSecret),
+    [],
+  );
+
+  const confirmEmailChange = useCallback(async (code: string) => {
+    const { user: updated } = await auth.confirmEmailChange(code);
+    if (updated) setSession((current) => (current ? { ...current, user: updated } : current));
+  }, []);
 
   const logout = useCallback(async (options: { forgetCache?: boolean } = {}) => {
     const currentUser = session?.user;
@@ -322,6 +348,10 @@ export function useMemoStore() {
     signup,
     logout,
     switchMode,
+    requestPasswordReset,
+    confirmPasswordReset,
+    requestEmailChange,
+    confirmEmailChange,
     syncNow: () => runSync(),
   };
 }

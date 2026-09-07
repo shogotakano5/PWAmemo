@@ -138,6 +138,34 @@ async function migrate(): Promise<void> {
       created_at  BIGINT NOT NULL
     );
   `);
+
+  // One-time codes for "forgot password" (also covers a forgotten PIN). Keyed
+  // by the account's existing e-mail, same one-row-per-address shape as above.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_otp (
+      email_index TEXT PRIMARY KEY,
+      code_hash   TEXT NOT NULL,
+      expires_at  BIGINT NOT NULL,
+      attempts    INTEGER NOT NULL DEFAULT 0,
+      created_at  BIGINT NOT NULL
+    );
+  `);
+
+  // One-time codes confirming a pending e-mail address change. Keyed by user
+  // (not by the new address), since the new address isn't associated with the
+  // account until the code is confirmed. The new address is itself encrypted
+  // at rest, same as the users table, and only decrypted to apply the change.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_change_otp (
+      user_id             TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      new_email_index     TEXT NOT NULL,
+      new_email_encrypted TEXT NOT NULL,
+      code_hash           TEXT NOT NULL,
+      expires_at          BIGINT NOT NULL,
+      attempts            INTEGER NOT NULL DEFAULT 0,
+      created_at          BIGINT NOT NULL
+    );
+  `);
 }
 
 /** Returns a migrated pool. The migration runs at most once per process. */
